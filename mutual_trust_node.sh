@@ -162,7 +162,14 @@ echo "docker已经安装完毕!!!"
 else
 mkdir -p /etc/docker
 yum-config-manager --add-repo  https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-yum install -y --setopt=obsoletes=0 docker-ce-18.09.4-3.el7
+
+num=0
+while true ; do
+let num+=1
+
+yum install -y --setopt=obsoletes=0 docker-ce-$dockerVersion
+
+if [[ $? -eq 0 ]] ; then
 tee /etc/docker/daemon.json <<-'EOF'
 {
   "registry-mirrors": ["https://gpkhi0nk.mirror.aliyuncs.com"]
@@ -171,7 +178,16 @@ EOF
 systemctl daemon-reload
 systemctl enable docker
 systemctl restart docker
-echo "docker已经安装完毕!!!"
+echo "docker 安装成功！！！"
+break;
+else
+if [[ num -gt 3 ]];then
+echo "docker 安装3次仍然失败，退出安装docker！"
+break
+fi
+echo "docker 安装？哥再来一次！！"
+fi
+done
 fi
 }
 

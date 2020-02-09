@@ -141,14 +141,12 @@ if [[ $? -eq 0 ]];then
 echo "hosts修改完毕！！！"
 else
 let num+=1
-
 if [[ $host == `get_localip` ]];then
 `hostnamectl set-hostname $hostname$num`
 echo $host `hostname` >> /etc/hosts
 else
 echo $host $hostname$num >> /etc/hosts
 fi
-
 fi
 done
 
@@ -162,7 +160,14 @@ echo "docker已经安装完毕!!!"
 else
 mkdir -p /etc/docker
 yum-config-manager --add-repo  https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-yum install -y --setopt=obsoletes=0 docker-ce-18.09.4-3.el7
+
+num=0
+while true ; do
+let num+=1
+
+yum install -y --setopt=obsoletes=0 docker-ce-$dockerVersion
+
+if [[ $? -eq 0 ]] ; then
 tee /etc/docker/daemon.json <<-'EOF'
 {
   "registry-mirrors": ["https://gpkhi0nk.mirror.aliyuncs.com"]
@@ -171,7 +176,16 @@ EOF
 systemctl daemon-reload
 systemctl enable docker
 systemctl restart docker
-echo "docker已经安装完毕!!!"
+echo "docker 安装成功！！！"
+break;
+else
+if [[ num -gt 3 ]];then
+echo "docker 安装3次仍然失败，退出安装docker！"
+break
+fi
+echo "docker 安装？哥再来一次！！"
+fi
+done
 fi
 }
 
@@ -187,7 +201,6 @@ systemctl restart docker.service
 echo "docker API接口已经配置完毕"
 fi
 }
-
 pull_ceph_image(){
 docker pull registry.cn-hangzhou.aliyuncs.com/yangb/ceph_luminous
 echo "docker 镜像下载完毕"
@@ -207,15 +220,11 @@ if [[ ! -f /root/.ssh/id_rsa.pub ]];then
 echo '###########init'
 expect ssh_trust_init.exp
 sshpass -p $root_passwd ssh-copy-id $host
-
 else
 echo '###########add'
 sshpass -p $root_passwd ssh-copy-id $host
 fi
-
-
 scp base.config mutual_trust_node.sh ssh_trust_init.exp root@$host:/root && scp /etc/hosts root@$host:/etc/hosts && ssh root@$host "hostnamectl set-hostname $hostname$num" && ssh root@$host /root/mutual_trust_node.sh && ssh root@$host "rm -rf mutual_trust_node.sh ssh_trust_init.exp"
-
 if [[ $ntpConfig == "1" ]];then
 scp hwclock_ntp.sh root@$host:/root && ssh root@$host /root/hwclock_ntp.sh && ssh root@$host "rm -rf /root/hwclock_ntp.sh /root/base.config"
 fi
